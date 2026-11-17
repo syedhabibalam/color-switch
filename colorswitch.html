@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Color Switch – Free Online Brain Game</title>
+<meta name="description" content="Play Color Switch, a free online brain game. Test your focus and decide whether the displayed ink color matches the color word before time runs out.">
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: linear-gradient(135deg, #172554, #4c1d95);
+  font-family: Arial, sans-serif;
+  color: white;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 500px;
+  background: #1e1b4b;
+  padding: 28px;
+  border-radius: 22px;
+  text-align: center;
+  box-shadow: 0 16px 45px rgba(0,0,0,0.4);
+}
+
+h1 {
+  color: #c4b5fd;
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #ddd6fe;
+  margin-bottom: 22px;
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.stat {
+  flex: 1;
+  background: #312e81;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.stat small {
+  display: block;
+  color: #ddd6fe;
+  margin-bottom: 6px;
+}
+
+.stat strong {
+  font-size: 22px;
+  color: #c4b5fd;
+}
+
+.question {
+  color: #ddd6fe;
+  margin-bottom: 15px;
+  font-size: 15px;
+}
+
+#word {
+  font-size: clamp(38px, 10vw, 58px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 28px 5px;
+  background: #11103b;
+  border-radius: 16px;
+  margin: 15px 0 20px;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.choices button,
+.start-btn {
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.choices button:hover,
+.start-btn:hover {
+  transform: translateY(-2px);
+}
+
+.yes {
+  background: #22c55e;
+  color: #052e16;
+}
+
+.no {
+  background: #fb7185;
+  color: #4c0519;
+}
+
+.start-btn {
+  width: 100%;
+  margin-top: 14px;
+  background: #c4b5fd;
+  color: #2e1065;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#message {
+  min-height: 28px;
+  margin: 15px 0;
+  color: #c4b5fd;
+  font-weight: bold;
+}
+
+.instructions {
+  font-size: 13px;
+  color: #ddd6fe;
+  line-height: 1.5;
+  margin-top: 16px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+  <h1>🎨 Color Switch</h1>
+  <p class="subtitle">Think fast. Trust your eyes!</p>
+
+  <div class="stats">
+
+    <div class="stat">
+      <small>SCORE</small>
+      <strong id="score">0</strong>
+    </div>
+
+    <div class="stat">
+      <small>TIME</small>
+      <strong id="time">30</strong>
+    </div>
+
+    <div class="stat">
+      <small>BEST</small>
+      <strong id="best">0</strong>
+    </div>
+
+  </div>
+
+  <p class="question">
+    Does the ink color match the word?
+  </p>
+
+  <div id="word">BLUE</div>
+
+  <div class="choices">
+
+    <button class="yes" id="yes"
+      onclick="answer(true)" disabled>
+      MATCH
+    </button>
+
+    <button class="no" id="no"
+      onclick="answer(false)" disabled>
+      NO MATCH
+    </button>
+
+  </div>
+
+  <p id="message">
+    Press Start to begin the 30-second challenge.
+  </p>
+
+  <button class="start-btn" id="start"
+    onclick="startGame()">
+    Start Game
+  </button>
+
+  <p class="instructions">
+    Choose MATCH if the text color and written color name
+    are the same. Otherwise choose NO MATCH.
+    Score as many points as possible in 30 seconds!
+  </p>
+
+</div>
+
+<script>
+
+const colors = [
+  { name: "RED", hex: "#ef4444" },
+  { name: "BLUE", hex: "#3b82f6" },
+  { name: "GREEN", hex: "#22c55e" },
+  { name: "YELLOW", hex: "#facc15" },
+  { name: "PURPLE", hex: "#c084fc" },
+  { name: "ORANGE", hex: "#fb923c" }
+];
+
+let score = 0;
+let time = 30;
+let playing = false;
+let correct = false;
+let timer = null;
+
+let best =
+  Number(localStorage.getItem("colorSwitchBest")) || 0;
+
+const $ = id => document.getElementById(id);
+
+$("best").textContent = best;
+
+
+// Generate random color challenge
+function newPrompt() {
+
+  const word =
+    colors[Math.floor(Math.random() * colors.length)];
+
+  const ink =
+    colors[Math.floor(Math.random() * colors.length)];
+
+  correct = word.name === ink.name;
+
+  $("word").textContent = word.name;
+  $("word").style.color = ink.hex;
+
+}
+
+
+// Start game
+function startGame() {
+
+  clearInterval(timer);
+
+  score = 0;
+  time = 30;
+  playing = true;
+
+  $("score").textContent = score;
+  $("time").textContent = time;
+
+  $("message").textContent = "Go!";
+
+  $("yes").disabled = false;
+  $("no").disabled = false;
+
+  $("start").disabled = true;
+  $("start").textContent = "Playing...";
+
+  newPrompt();
+
+  timer = setInterval(() => {
+
+    time--;
+
+    $("time").textContent = time;
+
+    if (time <= 0) {
+      endGame();
+    }
+
+  }, 1000);
+
+}
+
+
+// Check answer
+function answer(choice) {
+
+  if (!playing) return;
+
+  if (choice === correct) {
+
+    score++;
+
+    $("message").textContent =
+      "Correct! +1 point 🎉";
+
+  } else {
+
+    $("message").textContent =
+      "Oops! Keep going.";
+
+  }
+
+  $("score").textContent = score;
+
+  newPrompt();
+
+}
+
+
+// End game
+function endGame() {
+
+  clearInterval(timer);
+
+  playing = false;
+
+  $("yes").disabled = true;
+  $("no").disabled = true;
+
+  $("start").disabled = false;
+  $("start").textContent = "Play Again";
+
+  $("message").textContent =
+    "Time's up! Your score: " + score;
+
+  if (score > best) {
+
+    best = score;
+
+    localStorage.setItem(
+      "colorSwitchBest",
+      best
+    );
+
+    $("best").textContent = best;
+
+    $("message").textContent +=
+      " 🏆 New Best Score!";
+
+  }
+
+}
+
+</script>
+
+</body>
+</html>
